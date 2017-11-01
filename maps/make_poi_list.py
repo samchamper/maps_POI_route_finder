@@ -50,7 +50,6 @@ def crop(pois, lat, long, max_dist):
     :param max_dist: max distance
     :return: a filtered list
     """
-    print(lat, long, max_dist)
     # Convert from meters to radians:
     rad_dist = max_dist * math.cos(lat) / 111320
     crop_list = []

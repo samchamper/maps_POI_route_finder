@@ -7,6 +7,7 @@ from flask import request
 import config
 import logging
 import make_poi_list
+import best_route
 
 ###
 # Globals
@@ -65,8 +66,10 @@ def _poi():
 
     # If cur mode is not disp, we need to calculate the best route:
     # TODO
+    optimal = best_route.route(lat, long, max_dist, crop_pois)
     result = {"points": crop_pois}
     return flask.jsonify(result=result)
+
 
 if __name__ == "__main__":
     print("Opening for global access on port {}".format(CONFIG.PORT))
