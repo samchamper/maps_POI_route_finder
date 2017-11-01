@@ -2,10 +2,8 @@
 <html> <head>
 <title>Route finder</title>
 <!-- This page uses code from leafletjs's tutorials. -->
-  <!-- This page also makes use of code from the geocoding tutorial here:
-  http://www.liedman.net/leaflet-routing-machine/tutorials/geocoders/
-  using the leaflet control geocoder:
-  https://github.com/perliedman/leaflet-control-geocoder -->
+<!--Also uses code from esri reverse geocoding tutorial:
+ https://esri.github.io/esri-leaflet/examples/reverse-geocoding.html -->
 
     <!-- 'viewport' is used by bootstrap to respond to device size -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -19,16 +17,19 @@
    <script
     src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js">
    </script>
-   <!--  The Leaflet CSS file: -->
-   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.2.0/dist/leaflet.css"
-  integrity="sha512-M2wvCLH6DSRazYeZRIm1JnYyh22purTM+FDB5CsyxtQJYeKq83arPe5wgbNmcFXGqiSH2XR8dT/fJISVA1r/zQ=="
-  crossorigin=""/>
-  <!--  The leaflet js file: -->
-  <script src="https://unpkg.com/leaflet@1.2.0/dist/leaflet.js"
-    integrity="sha512-lInM/apFSqyy1o6s89K4iQUKg6ppXEgsVxT35HbzUupEVRh2Eu9Wdl4tHj7dZO0s1uvplcYGmt3498TtHq+log=="
-    crossorigin=""></script>
 
-   <!--<script src="{{ url_for('static', filename='Control.Geocoder.js') }}"></script>-->
+   <!-- Load Leaflet from CDN -->
+   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.2.0/dist/leaflet.css"
+   integrity="sha512-M2wvCLH6DSRazYeZRIm1JnYyh22purTM+FDB5CsyxtQJYeKq83arPe5wgbNmcFXGqiSH2XR8dT/fJISVA1r/zQ=="
+   crossorigin=""/>
+   <script src="https://unpkg.com/leaflet@1.2.0/dist/leaflet.js"
+   integrity="sha512-lInM/apFSqyy1o6s89K4iQUKg6ppXEgsVxT35HbzUupEVRh2Eu9Wdl4tHj7dZO0s1uvplcYGmt3498TtHq+log=="
+   crossorigin=""></script>
+   <!-- Load Esri Leaflet from CDN -->
+   <script src="https://unpkg.com/esri-leaflet@2.1.1/dist/esri-leaflet.js"
+   integrity="sha512-ECQqaYZke9cSdqlFG08zSkudgrdF6I1d8ViSa7I3VIszJyVqw4ng1G8sehEXlumdMnFYfzY0tMgdQa4WCs9IUw=="
+   crossorigin=""></script>
+   <script src="{{ url_for('static', filename="esri-leaflet-geocoder.js") }}"></script>
 
 </head>
 
@@ -61,12 +62,12 @@
 <br />
 <label> Mode: </label>
 <select name="mode" id="mode">
-    <option value="disp">Display all points of interest</option>
-    <option value="route">Calculate optimal route</option>
+    <option value="disp">Display points of interest</option>
+    <option value="route">Calculate optimal route between points of interest</option>
 </select>
 <select name="type_of_pois" id="type_of_pois">
-    <option value="all">All points of interest</option>
     <option value="gym">Gyms only</option>
+    <option value="all">Both gyms and stops</option>
 </select>
 <br /><br />
 <p>Display points of interest mode displays all points of interest within the maximum distance of the marker. Calculate optimal route mode displays the route which traverses through the most points of interest that has a length of at most maximum distance.</p>
@@ -80,17 +81,18 @@
 
 <script type="text/javascript">
   var SCRIPT_ROOT = {{ request.script_root|tojson|safe }} ;
-  var mymap = L.map('mapid').setView([44.045, -123.075], 13);
   var POI_URL = SCRIPT_ROOT + "/_poi";
 
   // The map.
+  var mymap = L.map('mapid').setView([44.045, -123.075], 13);
   L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
-      attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+      attribution: 'Powered by Esri; Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
       maxZoom: 18,
       id: 'mapbox.streets',
       accessToken: '{{g.mapbox_key}}'
   }).addTo(mymap);
-//  L.Control.geocoder().addTo(mymap);
+
+  var geocodeService = L.esri.Geocoding.geocodeService();
 
   // Initialize global max distance with default val 2km.
   var max_dist = 2000;
@@ -100,30 +102,31 @@
   var markers = new L.FeatureGroup();
   var pointlist = [];
 
+  var here_icon = L.icon({
+    iconUrl: 'https://openclipart.org/image/2400px/svg_to_png/201733/1410105361.png',
+    iconAnchor:   [21, 50],
+    iconSize:     [21, 50],
+    popupAnchor:  [-2, -60]
+});
+
   var circle = L.circle();
-  var start_point = L.marker({draggable: true});
+  var start_point = L.marker({icon: here_icon, draggable: true});
   mymap.on('click', function(e){
-     // I can't find a print string format thing for javascript so I'm going to round the numbers for printing.
      lat = e.latlng.lat;
      long = e.latlng.lng;
-     var format_lat = Math.floor(e.latlng.lat * 1000) / 1000;
-     var format_long = Math.floor(e.latlng.lng * 1000) / 1000;
-     circle.setLatLng(e.latlng);
-     circle.setRadius(max_dist);
-     start_point.setLatLng(e.latlng);
-     circle.addTo(mymap);
-     start_point.addTo(mymap)
-        .bindPopup("<b>Start point: </b><br />" + format_lat + ", " + format_long).openPopup();
-     console.log("Setting marker to: " + lat + ", " + long);
-    //  start_point.on('dragend', function(dragfunc){
-    //   console.log("Test");
-    //    var position = dragfunc.target.getLatLng();
-    //    var lat = Math.floor(position.lat * 1000) / 1000;
-    //    var long = Math.floor(position.lng * 1000) / 1000;
-    //    start_point.setLatLng(new L.LatLng(position.lat, position.lng),{draggable:'true'})
-    //            .bindPopup("<b>Start point: </b><br />" + lat + ", " + long).openPopup();
-    //        mymap.panTo(new L.LatLng(position.lat, position.lng));
-    // });
+     geocodeService.reverse().latlng(e.latlng).run(function(error, result) {
+       var format_lat = Math.floor(lat * 1000) / 1000;
+       var format_long = Math.floor(long * 1000) / 1000;
+       circle.setLatLng(e.latlng);
+       circle.setRadius(max_dist);
+       start_point.setLatLng(e.latlng);
+       circle.addTo(mymap);
+       var addr = result.address.Match_addr
+       start_point.setIcon(here_icon)
+       start_point.addTo(mymap)
+          .bindPopup("<b>Start point: </b><br/>" + format_lat + ", " + format_long + "<br/>" + addr).openPopup();
+       console.log("Setting marker to: " + lat + ", " + long);
+       });
       mymap.panTo(e.latlng);
       map_stuff();
    });
@@ -146,7 +149,7 @@
                    var cur_lat = points_to_add[i][0];
                    var cur_long = points_to_add[i][1];
                    var cur_point = L.marker([cur_lat, cur_long]);
-                   pointlist.push(cur_point);
+                   pointlist[i] = cur_point;
                    markers.addLayer(pointlist[i]);
                }
            } // end of handler function

@@ -50,16 +50,11 @@ def crop(pois, lat, long, max_dist):
     :param max_dist: max distance
     :return: a filtered list
     """
-    print("\n\n\n")
-    print("TESTSETSETSETSETSETSET")
     print(lat, long, max_dist)
+    # Convert from meters to radians:
     rad_dist = max_dist * math.cos(lat) / 111320
-    print ("RADDIST:", rad_dist)
-
     crop_list = []
     for i in pois:
         if math.hypot(lat-i[0], long - i[1]) <= rad_dist:
             crop_list.append(i)
-    print(len(crop_list))
-    print("TESTSETSETSETSETSETSET")
     return crop_list

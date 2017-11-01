@@ -9,7 +9,7 @@ Michal Young
 
 ********
 
-This program displays a list of points of interest. Or can calculate routes (not working yet).
+This program displays a points of interest within a specified distance of a dropped marker, or can calculate routes (right now the cropping of points of interest to within a distance of the marker and the calculation of routes is not yet implemented).
 
 ## Usage  
 

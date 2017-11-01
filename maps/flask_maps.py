@@ -54,11 +54,17 @@ def _poi():
     long = request.args.get('long', type=float)
     type_of_pois = request.args.get('type_of_pois')
     cur_mode = request.args.get('cur_mode')
-    points = []
 
+    # Filter the list of points of interest to only the poi types we want.
     filter_pois = make_poi_list.filter(full_poi_list, type_of_pois)
+    # Crop the filtered list to a circle with radius max dist at our start location.
     crop_pois = make_poi_list.crop(filter_pois, lat, long, max_dist)
+    if cur_mode == "disp":
+        result = {"points": crop_pois}
+        return flask.jsonify(result=result)
 
+    # If cur mode is not disp, we need to calculate the best route:
+    # TODO
     result = {"points": crop_pois}
     return flask.jsonify(result=result)
 
