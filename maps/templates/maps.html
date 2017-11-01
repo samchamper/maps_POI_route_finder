@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Route finder</title>
+<!-- This page uses code from leafletjs's tutorials. -->
+  <!-- This page also makes use of code from the geocoding tutorial here:
+  http://www.liedman.net/leaflet-routing-machine/tutorials/geocoders/
+  using the leaflet control geocoder:
+  https://github.com/perliedman/leaflet-control-geocoder -->
+
+    <!-- 'viewport' is used by bootstrap to respond to device size -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Javascript:  JQuery from a content distribution network (CDN) -->
+  <script
+     src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js">
+  </script>
+  <!-- Bootstrap includes javascript and css  (must follow jquery) -->
+  <link rel="stylesheet"
+   href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+   <script
+    src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js">
+   </script>
+   <!--  The Leaflet CSS file: -->
+   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.2.0/dist/leaflet.css"
+  integrity="sha512-M2wvCLH6DSRazYeZRIm1JnYyh22purTM+FDB5CsyxtQJYeKq83arPe5wgbNmcFXGqiSH2XR8dT/fJISVA1r/zQ=="
+  crossorigin=""/>
+  <!--  The leaflet js file: -->
+  <script src="https://unpkg.com/leaflet@1.2.0/dist/leaflet.js"
+    integrity="sha512-lInM/apFSqyy1o6s89K4iQUKg6ppXEgsVxT35HbzUupEVRh2Eu9Wdl4tHj7dZO0s1uvplcYGmt3498TtHq+log=="
+    crossorigin=""></script>
+
+   <!--<script src="{{ url_for('static', filename='Control.Geocoder.js') }}"></script>-->
+
+</head>
+
+<body>
+<!-- bootstrap requires a 'container' div around content -->
+<div class="container">
+<h1>Point of interest and route finder</h1>
+  <!--
+  -- If there are any warnings or other messages from a prior
+  -- request to the server,
+  -- they appear above the rest of the content, just until the next
+  -- action.  (This is only on request/response transactions that
+  -- result in regenerating the page, not on every xmlhttp request.)
+  -->
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+
+
+<input name="miles" type="text" size="5" id="max_miles" placeholder="1.24" />
+<label> Kilometers: </label>
+<input name="km" type="text" size="5" id="max_km" tag="km" placeholder="2" />
+<label> (note: 10km max). </label>
+<br />
+<label> Mode: </label>
+<select name="mode" id="mode">
+    <option value="disp">Display all points of interest</option>
+    <option value="route">Calculate optimal route</option>
+</select>
+<select name="type_of_pois" id="type_of_pois">
+    <option value="all">All points of interest</option>
+    <option value="gym">Gyms only</option>
+</select>
+<br /><br />
+<p>Display points of interest mode displays all points of interest within the maximum distance of the marker. Calculate optimal route mode displays the route which traverses through the most points of interest that has a length of at most maximum distance.</p>
+<p>Warning: calculating route may crash if you try to use all types of points of interest! Try setting to gym only!</p>
+    <br />
+<p>Choose a location on the map!</p>
+<br />
+<div id="mapid" style="width: 700px; height: 400px;"></div>
+<br />
+<br />
+
+<script type="text/javascript">
+  var SCRIPT_ROOT = {{ request.script_root|tojson|safe }} ;
+  var mymap = L.map('mapid').setView([44.045, -123.075], 13);
+  var POI_URL = SCRIPT_ROOT + "/_poi";
+
+  // The map.
+  L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+      attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+      maxZoom: 18,
+      id: 'mapbox.streets',
+      accessToken: '{{g.mapbox_key}}'
+  }).addTo(mymap);
+//  L.Control.geocoder().addTo(mymap);
+
+  // Initialize global max distance with default val 2km.
+  var max_dist = 2000;
+  // Init global vars.
+  var lat = 44.045;
+  var long = -123.075;
+  var markers = new L.FeatureGroup();
+  var pointlist = [];
+
+  var circle = L.circle();
+  var start_point = L.marker({draggable: true});
+  mymap.on('click', function(e){
+     // I can't find a print string format thing for javascript so I'm going to round the numbers for printing.
+     lat = e.latlng.lat;
+     long = e.latlng.lng;
+     var format_lat = Math.floor(e.latlng.lat * 1000) / 1000;
+     var format_long = Math.floor(e.latlng.lng * 1000) / 1000;
+     circle.setLatLng(e.latlng);
+     circle.setRadius(max_dist);
+     start_point.setLatLng(e.latlng);
+     circle.addTo(mymap);
+     start_point.addTo(mymap)
+        .bindPopup("<b>Start point: </b><br />" + format_lat + ", " + format_long).openPopup();
+     console.log("Setting marker to: " + lat + ", " + long);
+    //  start_point.on('dragend', function(dragfunc){
+    //   console.log("Test");
+    //    var position = dragfunc.target.getLatLng();
+    //    var lat = Math.floor(position.lat * 1000) / 1000;
+    //    var long = Math.floor(position.lng * 1000) / 1000;
+    //    start_point.setLatLng(new L.LatLng(position.lat, position.lng),{draggable:'true'})
+    //            .bindPopup("<b>Start point: </b><br />" + lat + ", " + long).openPopup();
+    //        mymap.panTo(new L.LatLng(position.lat, position.lng));
+    // });
+      mymap.panTo(e.latlng);
+      map_stuff();
+   });
+
+   function map_stuff(){
+    // Clear all markers from the previous query from the map
+       for (var i = 0; i < pointlist.length; i++){
+           markers.removeLayer(pointlist[i]);
+       }
+       var cur_mode = document.getElementById('mode').value;
+       var type_of_pois = document.getElementById('type_of_pois').value;
+       mymap.addLayer(markers);
+       $.getJSON(POI_URL, { max_dist: max_dist, lat: lat, long: long, cur_mode: cur_mode,
+               type_of_pois: type_of_pois},
+           // response handler
+           function(data) {
+               var points_to_add = data.result.points;
+               console.log("Adding " + points_to_add.length + " pois.");
+               for (var i = 0; i < points_to_add.length; i++){
+                   var cur_lat = points_to_add[i][0];
+                   var cur_long = points_to_add[i][1];
+                   var cur_point = L.marker([cur_lat, cur_long]);
+                   pointlist.push(cur_point);
+                   markers.addLayer(pointlist[i]);
+               }
+           } // end of handler function
+       );// End of getJSON
+   }
+
+  $(document).ready(function(){onPageLoad();});
+  function onPageLoad(){
+      // Set up listeners when the page is finished loading
+      console.log("--- PAGE HAS LOADED ---");
+
+      $('input[id="max_miles"]').change(
+          function() {
+              var miles = parseFloat($(this).val());
+              // Don't bother doing any work if input isn't a number.
+              if (typeof miles === 'number' && isNaN(miles) === false){
+                  if (miles > 6.21)
+                      {miles = 6.21;}
+                  this.value = miles;
+                  var km = (1.609344 * miles).toFixed(1);
+                  console.log("Converted " + miles + " miles to " + km + " kilometers");
+                  var target = document.getElementById('max_km');
+                  target.value = km;
+                  max_dist = 1000*km;
+              }
+          });
+
+      $('input[id="max_km"]').change(
+          function() {
+              var km = parseFloat($(this).val());
+              // Don't bother doing any work if input isn't a number.
+              if (typeof km === 'number' && isNaN(km) === false){
+                  if (km > 10)
+                      {km = 10;}
+                  this.value = km;
+                  var miles = (0.621371 * km).toFixed(1);
+                  console.log("Converted " + km + " km to " + miles + " miles");
+                  var target = document.getElementById('max_miles');
+                  target.value = miles;
+                  max_dist = 1000*km;
+              }
+          });
+
+      $('select[name="mode"]').change(
+          function() {
+              map_stuff();
+          });
+
+      $('select[name="type_of_pois"]').change(
+          function() {
+              map_stuff();
+          });
+  }   // end of what we do on document ready
+
+</script>
+</div>
+</body> </html>
