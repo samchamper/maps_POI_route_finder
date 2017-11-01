@@ -13,7 +13,7 @@ This program displays a points of interest within a specified distance of a drop
 
 ## Usage  
 
-To run, first copy credentials-skel.ini to the brevets folder and rename to credentials.ini, then run ```make start``` or create a virtual environment and then run flask_maps.py in the brevets folder:
+To run, first copy credentials-skel.ini to the maps folder and rename to credentials.ini, then run ```make start``` or create a virtual environment and then run flask_maps.py in the maps folder:
 ```
 python3 -m venv env
 pip install -r requirements.txt
@@ -23,10 +23,10 @@ python3 flask_maps.py
 
 ## Testing
 
-To run nosetests, first activate the virtual environment, then change directory to brevets and run nosetests:
+To run nosetests, first activate the virtual environment, then change directory to maps and run nosetests:
 
 ```
 . env/bin/activate
-cd brevets
+cd maps
 nosetests
 ```
