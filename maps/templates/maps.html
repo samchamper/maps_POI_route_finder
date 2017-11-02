@@ -75,7 +75,7 @@
     <br />
 <p>Choose a location on the map!</p>
 <br />
-<div id="mapid" style="width: 700px; height: 400px;"></div>
+<div id="mapid" style="width: 90%; height: 90%;"></div>
 <br />
 <br />
 
@@ -143,6 +143,7 @@
                type_of_pois: type_of_pois},
            // response handler
            function(data) {
+               // Get the list of map items from python
                var points_to_add = data.result.points;
                console.log("Adding " + points_to_add.length + " pois.");
                for (var i = 0; i < points_to_add.length; i++){
