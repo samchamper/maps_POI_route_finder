@@ -63,11 +63,11 @@ def _poi():
     if cur_mode == "disp":
         result = {"points": crop_pois}
         return flask.jsonify(result=result)
-
-    # If cur mode is not disp, we need to calculate the best route:
-    optimal = best_route.route(lat, long, max_dist, crop_pois)
-    result = {"points": optimal}
-    return flask.jsonify(result=result)
+    else:
+        # If cur mode is not disp, we need to calculate the best route:
+        optimal = best_route.route(lat, long, max_dist, crop_pois)
+        result = {"points": optimal}
+        return flask.jsonify(result=result)
 
 
 if __name__ == "__main__":

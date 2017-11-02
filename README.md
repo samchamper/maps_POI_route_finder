@@ -9,7 +9,7 @@ Michal Young
 
 ********
 
-This program displays a points of interest within a specified distance of a dropped marker, or can calculate routes (right now the cropping of points of interest to within a distance of the marker and the calculation of routes is not yet implemented).
+This program displays a points of interest within a specified distance of a dropped marker, or can calculate the route that traverses the most possible routes in the specified distance.
 
 ## Usage  
 
@@ -30,3 +30,5 @@ To run nosetests, first activate the virtual environment, then change directory 
 cd maps
 nosetests
 ```
+
+However, there are no nosetests yet!
