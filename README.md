@@ -1,15 +1,14 @@
-# Project 5: Point of interest map and route calculator
+# Point of interest map and route calculator
 
 ## Author
 Sam Champer  
-schampe2@uoregon.edu  
 
-Some starter code by:  
+Partially using code from:  
 Michal Young
 
 ********
 
-This program displays a points of interest within a specified distance of a dropped marker, or can calculate the route that traverses the most possible routes in the specified distance.
+This program displays a points of interest within a specified distance of a dropped marker, or can calculate the route that traverses the most possible points of interest within the specified distance.
 
 ## Usage  
 
